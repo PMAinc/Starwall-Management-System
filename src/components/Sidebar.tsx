@@ -25,21 +25,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
     <>
       <div 
         className={clsx(
-          "fixed inset-0 bg-gray-900 bg-opacity-50 z-20 transition-opacity md:hidden",
+          "fixed inset-0 bg-gray-900 bg-opacity-75 z-20 transition-opacity md:hidden",
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={toggleSidebar}
       />
       <aside 
         className={clsx(
-          "fixed top-0 left-0 z-30 w-64 h-screen transition-transform transform bg-white border-r border-gray-200 md:translate-x-0 md:static md:z-auto",
+          "fixed top-0 left-0 z-30 w-64 h-screen transition-transform transform bg-gray-800 border-r border-gray-700 md:translate-x-0 md:static md:z-auto",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h1 className="text-xl font-bold text-brand-700">Starwall™</h1>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h1 className="text-xl font-bold text-blue-400">Starwall™</h1>
           <button 
-            className="p-1 rounded-md md:hidden hover:bg-gray-100" 
+            className="p-1 rounded-md md:hidden hover:bg-gray-700 text-gray-300" 
             onClick={toggleSidebar}
           >
             <X size={20} />

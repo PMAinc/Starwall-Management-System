@@ -1,8 +1,7 @@
 import React from 'react';
-import ReactCalendar from 'react-calendar';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, isSameMonth, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import 'react-calendar/dist/Calendar.css';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 interface CalendarEvent {
@@ -17,7 +16,8 @@ interface ProductionCalendarProps {
 }
 
 const Calendar: React.FC<ProductionCalendarProps> = ({ events }) => {
-  const [value, setValue] = React.useState(new Date());
+  const [currentDate, setCurrentDate] = React.useState(new Date());
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
   
   // Group events by date
   const eventsByDate = React.useMemo(() => {
@@ -33,111 +33,163 @@ const Calendar: React.FC<ProductionCalendarProps> = ({ events }) => {
     
     return grouped;
   }, [events]);
-  
-  const tileContent = ({ date, view }: { date: Date; view: string }) => {
-    if (view !== 'month') return null;
-    
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayEvents = eventsByDate[dateStr] || [];
-    
-    if (dayEvents.length === 0) return null;
-    
-    return (
-      <div className="text-xs mt-1">
-        {dayEvents.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {dayEvents.slice(0, 2).map((event) => (
-              <div 
-                key={event.id}
-                className={clsx(
-                  "h-1.5 w-1.5 rounded-full", 
-                  event.type === 'production' && "bg-blue-500",
-                  event.type === 'installation' && "bg-green-500",
-                  event.type === 'meeting' && "bg-purple-500"
-                )}
-              />
-            ))}
-            {dayEvents.length > 2 && (
-              <div className="text-[10px] text-gray-500">+{dayEvents.length - 2}</div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const eventsForSelectedDate = React.useMemo(() => {
-    const dateStr = format(value, 'yyyy-MM-dd');
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     return eventsByDate[dateStr] || [];
-  }, [eventsByDate, value]);
+  }, [eventsByDate, selectedDate]);
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentDate(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
+  };
+
+  const getDayEvents = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return eventsByDate[dateStr] || [];
+  };
+
+  const getEventTypeColor = (type: string) => {
+    switch (type) {
+      case 'production':
+        return 'bg-blue-500';
+      case 'installation':
+        return 'bg-green-500';
+      case 'meeting':
+        return 'bg-purple-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <h2 className="text-lg font-semibold mb-4">Planning de production</h2>
-      <div className="calendar-container">
-        <style jsx>{`
-          :global(.react-calendar) {
-            width: 100%;
-            border: none;
-            font-family: inherit;
-          }
-          :global(.react-calendar__tile--active) {
-            background: #3b82f6;
-            color: white;
-          }
-          :global(.react-calendar__tile--active:enabled:hover) {
-            background: #2563eb;
-          }
-          :global(.react-calendar__tile--now) {
-            background: #dbeafe;
-          }
-          :global(.react-calendar__tile) {
-            padding: 8px;
-          }
-        `}</style>
-        <ReactCalendar
-          onChange={setValue}
-          value={value}
-          locale={fr}
-          tileContent={tileContent}
-        />
+    <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <CalendarIcon size={24} className="text-white" />
+            <h2 className="text-xl font-semibold text-white">Planning de production</h2>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => navigateMonth('prev')}
+              className="p-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="px-4 py-2 bg-blue-500 rounded-lg text-white font-medium min-w-[140px] text-center">
+              {format(currentDate, 'MMMM yyyy', { locale: fr })}
+            </div>
+            <button
+              onClick={() => navigateMonth('next')}
+              className="p-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
       </div>
-      
-      {eventsForSelectedDate.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-sm font-medium mb-2">
-            Événements du {format(value, 'dd MMMM yyyy', { locale: fr })}
-          </h3>
-          <ul className="space-y-2">
-            {eventsForSelectedDate.map((event) => (
-              <li key={event.id} className="text-sm flex items-center">
-                <span 
-                  className={clsx(
-                    "w-2 h-2 rounded-full mr-2", 
-                    event.type === 'production' && "bg-blue-500",
-                    event.type === 'installation' && "bg-green-500",
-                    event.type === 'meeting' && "bg-purple-500"
-                  )}
-                />
-                {event.title}
-              </li>
+
+      <div className="p-6">
+        {/* Calendar Grid */}
+        <div className="mb-6">
+          {/* Day headers */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'].map((day) => (
+              <div key={day} className="calendar-day-header">
+                {day}
+              </div>
             ))}
-          </ul>
+          </div>
+
+          {/* Calendar days */}
+          <div className="grid grid-cols-7 gap-2">
+            {calendarDays.map((date) => {
+              const dayEvents = getDayEvents(date);
+              const isSelected = isSameDay(date, selectedDate);
+              const isTodayDate = isToday(date);
+              const isCurrentMonth = isSameMonth(date, currentDate);
+
+              return (
+                <button
+                  key={date.toISOString()}
+                  onClick={() => setSelectedDate(date)}
+                  className={clsx(
+                    'calendar-day h-16 relative',
+                    isSelected && 'calendar-day-current',
+                    isTodayDate && !isSelected && 'calendar-day-today',
+                    !isCurrentMonth && 'calendar-day-other-month',
+                    isCurrentMonth && !isSelected && !isTodayDate && 'calendar-day-default'
+                  )}
+                >
+                  <span className="text-sm font-medium">
+                    {format(date, 'd')}
+                  </span>
+                  
+                  {/* Event indicators */}
+                  {dayEvents.length > 0 && (
+                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
+                      {dayEvents.slice(0, 3).map((event, index) => (
+                        <div
+                          key={`${event.id}-${index}`}
+                          className={clsx(
+                            'w-1.5 h-1.5 rounded-full',
+                            getEventTypeColor(event.type)
+                          )}
+                        />
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
-      
-      <div className="mt-4 flex gap-4 text-xs">
-        <div className="flex items-center">
-          <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
-          <span>Production</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
-          <span>Installation</span>
-        </div>
-        <div className="flex items-center">
-          <div className="w-2 h-2 rounded-full bg-purple-500 mr-1"></div>
-          <span>Réunion</span>
+
+        {/* Selected date events */}
+        {eventsForSelectedDate.length > 0 && (
+          <div className="border-t border-gray-700 pt-6">
+            <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
+              <CalendarIcon size={18} className="mr-2" />
+              Événements du {format(selectedDate, 'dd MMMM yyyy', { locale: fr })}
+            </h3>
+            <div className="space-y-3">
+              {eventsForSelectedDate.map((event) => (
+                <div key={event.id} className="event-item">
+                  <div className={clsx('event-type-dot', `event-${event.type}`)} />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-200">{event.title}</div>
+                    <div className="text-xs text-gray-400 capitalize">{event.type}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Legend */}
+        <div className="border-t border-gray-700 pt-6 mt-6">
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+              <span className="text-gray-300">Production</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+              <span className="text-gray-300">Installation</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-purple-500 mr-2"></div>
+              <span className="text-gray-300">Réunion</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
